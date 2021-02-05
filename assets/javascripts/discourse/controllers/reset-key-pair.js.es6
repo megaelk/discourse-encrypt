@@ -58,12 +58,12 @@ export default Ember.Controller.extend(ModalFunctionality, {
         deleteDb,
       ])
         .then(() => {
-          this.currentUser.setProperties({
+          this.model.setProperties({
             encrypt_public: null,
             encrypt_private: null,
           });
 
-          this.appEvents.trigger("encrypt:status-changed");
+          this.appEvents.trigger("encrypt:updated");
           this.send("closeModal");
         })
         .catch(popupAjaxError)

@@ -2,7 +2,7 @@ import debounce from "discourse/plugins/discourse-encrypt/lib/debounce";
 import { ajax } from "discourse/lib/ajax";
 import {
   DB_NAME,
-  DB_VERSION,
+  DB_NAME_PUBLIC,
   loadDbIdentity,
   saveDbIdentity,
 } from "discourse/plugins/discourse-encrypt/lib/database";
@@ -296,7 +296,8 @@ export function getEncryptionStatus(user) {
 
   if (
     !window.localStorage.getItem(DB_NAME) ||
-    !window.localStorage.getItem(DB_VERSION)
+    (window.localStorage.getItem(DB_NAME_PUBLIC) &&
+      window.localStorage.getItem(DB_NAME_PUBLIC) !== user.encrypt_public)
   ) {
     return ENCRYPT_ENABLED;
   }

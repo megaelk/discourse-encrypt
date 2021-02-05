@@ -1,39 +1,12 @@
-import I18n from "I18n";
-import { getOwner } from "discourse-common/lib/get-owner";
 import {
   ENCRYPT_ACTIVE,
   ENCRYPT_DISABLED,
-  getEncryptionStatus,
 } from "discourse/plugins/discourse-encrypt/lib/discourse";
+import I18n from "I18n";
 
 export default {
   setupComponent(args, component) {
-    const currentUser = getOwner(component).lookup("current-user:main");
-    const status = getEncryptionStatus(currentUser);
-
     component.setProperties({
-      isEncryptEnabled: status !== ENCRYPT_DISABLED,
-      isEncryptActive: status === ENCRYPT_ACTIVE,
-
-      /** Listens for encryption status updates. */
-      listener() {
-        const newStatus = getEncryptionStatus(currentUser);
-        component.setProperties({
-          isEncryptEnabled: newStatus !== ENCRYPT_DISABLED,
-          isEncryptActive: newStatus === ENCRYPT_ACTIVE,
-        });
-      },
-
-      didInsertElement() {
-        this._super(...arguments);
-        this.appEvents.on("encrypt:status-changed", this, this.listener);
-      },
-
-      willDestroyElement() {
-        this._super(...arguments);
-        this.appEvents.off("encrypt:status-changed", this, this.listener);
-      },
-
       clicked() {
         if (!this.disabled) {
           this.model.setProperties({
@@ -48,6 +21,22 @@ export default {
         }
       },
     });
+
+    Ember.defineProperty(
+      component,
+      "isEncryptEnabled",
+      Ember.computed("currentUser.encryptStatus", () => {
+        return this.currentUser.encryptStatus !== ENCRYPT_DISABLED;
+      })
+    );
+
+    Ember.defineProperty(
+      component,
+      "isEncryptActive",
+      Ember.computed("currentUser.encryptStatus", () => {
+        return this.currentUser.encryptStatus === ENCRYPT_ACTIVE;
+      })
+    );
 
     Ember.defineProperty(
       component,

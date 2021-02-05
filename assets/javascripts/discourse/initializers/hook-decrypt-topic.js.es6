@@ -74,7 +74,7 @@ export default {
     }
 
     const appEvents = container.lookup("service:app-events");
-    appEvents.on("encrypt:status-changed", this, this.decryptTitles);
+    appEvents.on("encrypt:updated", this, this.decryptTitles);
     appEvents.on("page:changed", this, this.decryptDocTitle);
 
     // Try to decrypt new titles that may appear after rendering a component.

@@ -8,7 +8,7 @@ import { Promise } from "rsvp";
  * @var {String} DB_NAME Name of IndexedDb used for storing key pairs.
  */
 export const DB_NAME = "discourse-encrypt";
-export const DB_VERSION = "discourse-encrypt-version";
+export const DB_NAME_PUBLIC = "discourse-encrypt-public";
 
 /**
  * When truthy, it uses local storage instead of IndexedDb to store user
@@ -55,7 +55,7 @@ function openDb(create) {
 function saveIdentityToLocalStorage(identity) {
   return exportIdentity(identity).then((exported) => {
     window.localStorage.setItem(DB_NAME, exported.private);
-    window.localStorage.setItem(DB_VERSION, identity.version);
+    window.localStorage.setItem(DB_NAME_PUBLIC, exported.public);
   });
 }
 
@@ -97,10 +97,12 @@ export function saveDbIdentity(identity) {
 
       const dataReq = st.add(identity);
       dataReq.onsuccess = (dataEvt) => {
-        window.localStorage.setItem(DB_NAME, true);
-        window.localStorage.setItem(DB_VERSION, identity.version);
-        resolve(dataEvt);
-        db.close();
+        exportIdentity(identity).then((exported) => {
+          window.localStorage.setItem(DB_NAME, true);
+          window.localStorage.setItem(DB_NAME_PUBLIC, exported.public);
+          resolve(dataEvt);
+          db.close();
+        }, reject);
       };
       // eslint-disable-next-line no-unused-vars
       dataReq.onerror = (dataEvt) => {
@@ -177,7 +179,7 @@ export function loadDbIdentity() {
  */
 export function deleteDb() {
   window.localStorage.removeItem(DB_NAME);
-  window.localStorage.removeItem(DB_VERSION);
+  window.localStorage.removeItem(DB_NAME_PUBLIC);
 
   return new Promise((resolve) => {
     const req = window.indexedDB.deleteDatabase(DB_NAME);

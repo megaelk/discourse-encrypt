@@ -10,7 +10,6 @@ import {
   activateEncrypt,
   canEnableEncrypt,
   enableEncrypt,
-  getEncryptionStatus,
 } from "discourse/plugins/discourse-encrypt/lib/discourse";
 import { unpackIdentity } from "discourse/plugins/discourse-encrypt/lib/pack";
 import { importIdentity } from "discourse/plugins/discourse-encrypt/lib/protocol";
@@ -35,7 +34,6 @@ export default {
     });
 
     if (isCurrentUser) {
-      const status = getEncryptionStatus(args.model);
       component.setProperties({
         /** Value of passphrase input.
          *  It should stay in memory for as little time as possible.
@@ -49,27 +47,23 @@ export default {
         /** Whether any operation (AJAX request, key generation, etc.) is
          *  in progress. */
         inProgress: false,
-        /** Whether the encryption is enabled or not. */
-        isEncryptEnabled: status !== ENCRYPT_DISABLED,
-        /** Whether the encryption is active on this device. */
-        isEncryptActive: status === ENCRYPT_ACTIVE,
-        /** Listens for encryption status updates. */
-        listener() {
-          const newStatus = getEncryptionStatus(args.model);
-          component.setProperties({
-            isEncryptEnabled: newStatus !== ENCRYPT_DISABLED,
-            isEncryptActive: newStatus === ENCRYPT_ACTIVE,
-          });
-        },
-        didInsertElement() {
-          this._super(...arguments);
-          this.appEvents.on("encrypt:status-changed", this, this.listener);
-        },
-        willDestroyElement() {
-          this._super(...arguments);
-          this.appEvents.off("encrypt:status-changed", this, this.listener);
-        },
       });
+
+      Ember.defineProperty(
+        component,
+        "isEncryptEnabled",
+        Ember.computed("currentUser.encryptStatus", () => {
+          return this.currentUser.encryptStatus !== ENCRYPT_DISABLED;
+        })
+      );
+
+      Ember.defineProperty(
+        component,
+        "isEncryptActive",
+        Ember.computed("currentUser.encryptStatus", () => {
+          return this.currentUser.encryptStatus === ENCRYPT_ACTIVE;
+        })
+      );
     }
   },
 
@@ -79,7 +73,7 @@ export default {
 
       return enableEncrypt(this.model, this.importIdentity && this.identity)
         .then(() => {
-          this.appEvents.trigger("encrypt:status-changed");
+          this.appEvents.trigger("encrypt:updated");
         })
         .catch(() =>
           bootbox.alert(I18n.t("encrypt.preferences.key_pair_invalid"))
@@ -105,7 +99,7 @@ export default {
 
       return identityPromise
         .then(() => {
-          this.appEvents.trigger("encrypt:status-changed");
+          this.appEvents.trigger("encrypt:updated");
         })
         .catch(() => {
           if (this.importIdentity) {
@@ -129,7 +123,7 @@ export default {
 
       deleteDb()
         .then(() => {
-          this.appEvents.trigger("encrypt:status-changed");
+          this.appEvents.trigger("encrypt:updated");
         })
         .finally(() => this.set("inProgress", false));
     },

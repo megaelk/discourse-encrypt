@@ -32,7 +32,7 @@ export default Ember.Controller.extend(ModalFunctionality, {
 
       return activateEncrypt(this.currentUser, this.passphrase)
         .then(() => {
-          this.appEvents.trigger("encrypt:status-changed");
+          this.appEvents.trigger("encrypt:updated");
           this.models.forEach((model) => {
             model.state.decrypting = true;
             model.state.decrypted = false;

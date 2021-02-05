@@ -1,4 +1,4 @@
-import I18n from "I18n";
+import getURL from "discourse-common/lib/get-url";
 import { withPluginApi } from "discourse/lib/plugin-api";
 import { deleteDb } from "discourse/plugins/discourse-encrypt/lib/database";
 import {
@@ -7,27 +7,54 @@ import {
   getEncryptionStatus,
   reload,
 } from "discourse/plugins/discourse-encrypt/lib/discourse";
-import getURL from "discourse-common/lib/get-url";
+import I18n from "I18n";
 
 export default {
   name: "update-state",
 
   initialize(container) {
     const currentUser = container.lookup("current-user:main");
-    const messageBus = container.lookup("message-bus:main");
+    const status = getEncryptionStatus(currentUser);
 
+    if (currentUser) {
+      currentUser.set("encryptStatus", status);
+    }
+
+    // Update 'encryptStatus' property of current user object when encrypt
+    // status changes.
+    //
+    // A page refresh is usually needed when the status changes in order
+    // to enable or disable parts of the plugin.
     const appEvents = container.lookup("service:app-events");
-    appEvents.on("encrypt:status-changed", (skipReload) => {
-      if (!skipReload) {
-        reload();
+    appEvents.on("encrypt:updated", () => {
+      if (currentUser) {
+        const encryptStatus = getEncryptionStatus(currentUser);
+        if (currentUser.encryptStatus !== encryptStatus) {
+          reload();
+        }
+        currentUser.set("encryptStatus", encryptStatus);
       }
     });
 
-    const status = getEncryptionStatus(currentUser);
+    // Completely deactivate encrypt if user is no longer logged in or they
+    // do not have encrypt active anymore.
     if (!currentUser || status !== ENCRYPT_ACTIVE) {
       deleteDb();
     }
 
+    // Update current user if user identity changes on the server side.
+    const messageBus = container.lookup("message-bus:main");
+    if (messageBus && status !== ENCRYPT_DISABLED) {
+      messageBus.subscribe("/plugin/encrypt/keys", function (data) {
+        currentUser.setProperties({
+          encrypt_public: data.public,
+          encrypt_private: data.private,
+        });
+        appEvents.trigger("encrypt:updated");
+      });
+    }
+
+    // Show warning if user does not have at least a paper key.
     if (
       currentUser &&
       status === ENCRYPT_ACTIVE &&
@@ -45,16 +72,6 @@ export default {
             dismissDuration: moment.duration(1, "day"),
           }
         );
-      });
-    }
-
-    if (messageBus && status !== ENCRYPT_DISABLED) {
-      messageBus.subscribe("/plugin/encrypt/keys", function (data) {
-        currentUser.setProperties({
-          encrypt_public: data.public,
-          encrypt_private: data.private,
-        });
-        appEvents.trigger("encrypt:status-changed", true);
       });
     }
   },

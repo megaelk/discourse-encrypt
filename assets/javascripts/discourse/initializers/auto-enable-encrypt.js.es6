@@ -24,7 +24,7 @@ export default {
         window.localStorage.setItem(AUTO_ENABLE_KEY, true);
         enableEncrypt(currentUser).then(() => {
           const appEvents = container.lookup("service:app-events");
-          appEvents.trigger("encrypt:status-changed");
+          appEvents.trigger("encrypt:updated");
         });
       }
     } else {

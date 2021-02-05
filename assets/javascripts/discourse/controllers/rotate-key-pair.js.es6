@@ -80,7 +80,7 @@ export default Ember.Controller.extend(ModalFunctionality, {
             })
             .then(() => {
               this.set("loading", "finished");
-              this.appEvents.trigger("encrypt:status-changed");
+              this.appEvents.trigger("encrypt:updated");
             });
         })
         .catch((e) => {
